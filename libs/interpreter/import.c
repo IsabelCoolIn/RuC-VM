@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include "debug.h"
 
 /*
  *	Я исхожу из того, что нумерация нитей процедурой t_create начинается с 1 и идет последовательно
@@ -65,7 +66,16 @@ int reprtab[MAXREPRTAB], rp, identab[MAXIDENTAB], id, modetab[MAXMODETAB], md;
 int mem[MAXMEMSIZE], functions[FUNCSIZE], funcnum;
 int threads[NUMOFTHREADS]; //, curthread, upcurthread;
 int procd, iniprocs[INIPROSIZE], base = 0, adinit, NN;
+int pconnect;
+typedef struct dline
+{
+	int line;
+	int pc;
+}dline;
+dline connect_d[100];
 FILE *input;
+int orders[100]={3,4,5};
+int porders=2;
 
 #ifdef __APPLE__
 char sem_print[] = "sem_print", sem_debug[] = "sem_debug";
@@ -83,7 +93,10 @@ extern int receive_int_from_robot(int);
 extern double receive_float_from_robot(int);
 // extern int *receive_string_from_robot(int);
 #endif
-
+void debug(int line)
+{
+	printf("line=%i\n",line);
+}
 void *interpreter(void *);
 
 
@@ -203,21 +216,6 @@ void auxprintf(int strbeg, int databeg)
 					curdata++;
 				}
 				break;
-
-				case 'p': 
-				case 1091: // у
-				{
-					if (mem[curdata] == 0)
-					{
-						printf("NULL");
-					}
-					else 
-					{
-						printf("0x%0X", mem[curdata]);
-					}
-					curdata++;
-					break;
-				}
 
 				case '%':
 					printf("%%");
@@ -446,7 +444,23 @@ void *interpreter(void *pcPnt)
 		memcpy(&rf, &mem[x - 1], sizeof(double));
 		// printf("pc=%i mem[pc]=%i\n", pc, mem[pc]);
 		// printf("running th #%i\n", t_getThNum());
+		debug_text(pc);
+		for (int i=0; i<=pconnect; ++i)//pconnect это цифра указывающая на размер массива
+		{
+			if (connect_d[i].pc==pc)//connect это "строка- pc"
+			{
+				int line=connect_d[i].line; 
+				for(int j=0;j<=porders;++j)
+				{
+					if(line==orders[j])
+					
+					//вызов отладчина которого еще нет
+					debug(line);
 
+				}
+			}
+			
+		}
 		switch (mem[pc++])
 		{
 			case STOP:
@@ -2286,7 +2300,6 @@ INTERPRETER_EXPORTED void import(const char *path)
 	char firstline[100];
 	int i;
 	int pc;
-
 	input = fopen(path, "r");
 
 	if (!input)
@@ -2301,8 +2314,20 @@ INTERPRETER_EXPORTED void import(const char *path)
 		fseek(input, 0, SEEK_SET);
 	}
 
-	fscanf(input, "%i %i %i %i %i %i %i\n", &pc, &funcnum, &id, &rp, &md, &maxdisplg, &wasmain);
+	fscanf(input, "%i %i %i %i %i %i %i %i\n",
+		 &pconnect ,
+		 &pc, 
+		 &funcnum, 
+		 &id, 
+		 &rp, 
+		 &md, 
+		 &maxdisplg, 
+		 &wasmain);
 
+	for (i=0; i<=pconnect; i++)
+	{
+		fscanf(input, "%i %i ", &connect_d[i].line, &connect_d[i].pc);
+	}
 	for (i = 0; i < pc; i++)
 	{
 		fscanf(input, "%i ", &mem[i]);
